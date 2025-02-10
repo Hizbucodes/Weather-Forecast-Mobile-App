@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
   SafeAreaView,
@@ -18,6 +19,7 @@ import Entypo from "@expo/vector-icons/Entypo";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { debounce } from "lodash";
 import { fetchForecastData, fetchLocationsData } from "../api/weather";
+import { getData, storeData } from "../utils/asyncStorage";
 
 const { width } = Dimensions.get("window");
 
@@ -25,16 +27,20 @@ const HomeScreen = () => {
   const [showSearchBar, setShowSearchBar] = useState(false);
   const [locations, setLocations] = useState([]);
   const [weather, setWeather] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const handleLocation = (location) => {
     console.log(location);
     setLocations([]);
     setShowSearchBar(false);
+    setLoading(true);
     fetchForecastData({
       cityName: location?.name,
       days: "7",
     }).then((data) => {
       setWeather(data);
+      setLoading(false);
+      storeData("city", location.name);
       console.log("get data", data);
     });
   };
@@ -52,11 +58,17 @@ const HomeScreen = () => {
   }, []);
 
   const fetchWeatherData = async () => {
+    let myCity = await getData("city");
+    let cityName = "Colombo";
+    if (myCity) {
+      cityName = myCity;
+    }
     fetchForecastData({
-      cityName: "Colombo",
+      cityName,
       days: "7",
     }).then((data) => {
       setWeather(data);
+      setLoading(false);
     });
   };
 
@@ -126,91 +138,105 @@ const HomeScreen = () => {
               </View>
             )}
           </View>
-          <View style={styles.forecastContainer}>
-            <View style={styles.forecastTextContainer}>
-              <Text style={styles.forecastTextHeadline}>
-                {location?.name} {"   "}
-                <Text style={styles.forecastTextSubHeading}>
-                  {location?.country}
-                </Text>
-              </Text>
-            </View>
-
-            <View style={styles.imageContainer}>
-              <Image
-                style={styles.image}
-                source={{ uri: `https:` + current?.condition?.icon }}
-              />
-            </View>
-            <View style={styles.degreeContainer}>
-              <Text style={styles.degreeText}>{current?.temp_c}&#176;</Text>
-              <Text style={styles.degreeWheather}>
-                {current?.condition?.text}
-              </Text>
-            </View>
-
-            <View style={styles.otherStatesContainer}>
-              <View style={styles.otherStatesValues}>
-                <Image
-                  style={styles.otherStatesIcon}
-                  source={require("../assets/icons/wind.png")}
-                />
-                <Text style={styles.otherStatesText}>
-                  {current?.wind_kph}km
+          {loading ? (
+            <ActivityIndicator
+              style={styles.loadingState}
+              size={80}
+              color={"white"}
+            />
+          ) : (
+            <View style={styles.forecastContainer}>
+              <View style={styles.forecastTextContainer}>
+                <Text style={styles.forecastTextHeadline}>
+                  {location?.name} {"   "}
+                  <Text style={styles.forecastTextSubHeading}>
+                    {location?.country}
+                  </Text>
                 </Text>
               </View>
-              <View style={styles.otherStatesValues}>
-                <Image
-                  style={styles.otherStatesIcon}
-                  source={require("../assets/icons/drop.png")}
-                />
-                <Text style={styles.otherStatesText}>{current?.humidity}%</Text>
-              </View>
-              <View style={styles.otherStatesValues}>
-                <Image
-                  style={styles.otherStatesIcon}
-                  source={require("../assets/icons/sun.png")}
-                />
-                <Text style={styles.otherStatesText}>6:05am</Text>
-              </View>
-            </View>
 
-            <View style={styles.dailyForcastContainer}>
-              <View style={styles.dailyForecastHeadlin}>
-                <AntDesign name="calendar" size={24} color="white" />
-                <Text style={styles.dailyForecastText}>Daily Forecast</Text>
+              <View style={styles.imageContainer}>
+                <Image
+                  style={styles.image}
+                  source={{ uri: `https:` + current?.condition?.icon }}
+                />
+              </View>
+              <View style={styles.degreeContainer}>
+                <Text style={styles.degreeText}>{current?.temp_c}&#176;</Text>
+                <Text style={styles.degreeWheather}>
+                  {current?.condition?.text}
+                </Text>
               </View>
 
-              <ScrollView
-                contentContainerStyle={{
-                  paddingHorizontal: 15,
-                }}
-                horizontal={true}
-                showsHorizontalScrollIndicator={false}
-              >
-                {weather?.forecast?.forecastday?.map((item, index) => {
-                  let date = new Date(item.date);
-                  let options = { weekday: "long" };
-                  let dayName = date.toLocaleDateString("en-US", options);
-                  return (
-                    <View
-                      key={index}
-                      style={styles.forecastForNextDaysContainer}
-                    >
-                      <Image
-                        style={styles.forecastForNextDaysImages}
-                        source={{ uri: `https:` + item?.day?.condition?.icon }}
-                      />
-                      <Text style={styles.forecastDays}>{dayName}</Text>
-                      <Text style={styles.forecastForNextDaysDegree}>
-                        {item?.day?.avgtemp_c}&#176;
-                      </Text>
-                    </View>
-                  );
-                })}
-              </ScrollView>
+              <View style={styles.otherStatesContainer}>
+                <View style={styles.otherStatesValues}>
+                  <Image
+                    style={styles.otherStatesIcon}
+                    source={require("../assets/icons/wind.png")}
+                  />
+                  <Text style={styles.otherStatesText}>
+                    {current?.wind_kph}km
+                  </Text>
+                </View>
+                <View style={styles.otherStatesValues}>
+                  <Image
+                    style={styles.otherStatesIcon}
+                    source={require("../assets/icons/drop.png")}
+                  />
+                  <Text style={styles.otherStatesText}>
+                    {current?.humidity}%
+                  </Text>
+                </View>
+                <View style={styles.otherStatesValues}>
+                  <Image
+                    style={styles.otherStatesIcon}
+                    source={require("../assets/icons/sun.png")}
+                  />
+                  <Text style={styles.otherStatesText}>
+                    {weather?.forecast?.forecastday[0]?.astro?.sunrise}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.dailyForcastContainer}>
+                <View style={styles.dailyForecastHeadlin}>
+                  <AntDesign name="calendar" size={24} color="white" />
+                  <Text style={styles.dailyForecastText}>Daily Forecast</Text>
+                </View>
+
+                <ScrollView
+                  contentContainerStyle={{
+                    paddingHorizontal: 15,
+                  }}
+                  horizontal={true}
+                  showsHorizontalScrollIndicator={false}
+                >
+                  {weather?.forecast?.forecastday?.map((item, index) => {
+                    let date = new Date(item.date);
+                    let options = { weekday: "long" };
+                    let dayName = date.toLocaleDateString("en-US", options);
+                    return (
+                      <View
+                        key={index}
+                        style={styles.forecastForNextDaysContainer}
+                      >
+                        <Image
+                          style={styles.forecastForNextDaysImages}
+                          source={{
+                            uri: `https:` + item?.day?.condition?.icon,
+                          }}
+                        />
+                        <Text style={styles.forecastDays}>{dayName}</Text>
+                        <Text style={styles.forecastForNextDaysDegree}>
+                          {item?.day?.avgtemp_c}&#176;
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              </View>
             </View>
-          </View>
+          )}
         </SafeAreaView>
       </View>
     </DisableKeyBoardHOC>
@@ -385,5 +411,8 @@ const styles = StyleSheet.create({
   forecastForNextDaysDegree: {
     fontWeight: "bold",
     fontSize: 17,
+  },
+  loadingState: {
+    flex: 1,
   },
 });
