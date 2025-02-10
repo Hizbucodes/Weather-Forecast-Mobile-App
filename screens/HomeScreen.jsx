@@ -9,23 +9,60 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import Feather from "@expo/vector-icons/Feather";
 import DisableKeyBoardHOC from "../components/DisableKeyBoardHOC";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import Entypo from "@expo/vector-icons/Entypo";
 import AntDesign from "@expo/vector-icons/AntDesign";
+import { debounce } from "lodash";
+import { fetchForecastData, fetchLocationsData } from "../api/weather";
 
 const { width } = Dimensions.get("window");
 
 const HomeScreen = () => {
   const [showSearchBar, setShowSearchBar] = useState(false);
-  const [locations, setLocations] = useState([1, 2, 3]);
+  const [locations, setLocations] = useState([]);
+  const [weather, setWeather] = useState([]);
 
   const handleLocation = (location) => {
     console.log(location);
+    setLocations([]);
+    setShowSearchBar(false);
+    fetchForecastData({
+      cityName: location?.name,
+      days: "7",
+    }).then((data) => {
+      setWeather(data);
+      console.log("get data", data);
+    });
   };
+
+  const handleSearch = (e) => {
+    if (e.length > 2) {
+      fetchLocationsData({ cityName: e }).then((data) => {
+        setLocations(data);
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchWeatherData();
+  }, []);
+
+  const fetchWeatherData = async () => {
+    fetchForecastData({
+      cityName: "Colombo",
+      days: "7",
+    }).then((data) => {
+      setWeather(data);
+    });
+  };
+
+  const handleTextDebounce = useCallback(debounce(handleSearch, 1200), []);
+
+  const { current, location } = weather;
 
   return (
     <DisableKeyBoardHOC>
@@ -40,6 +77,7 @@ const HomeScreen = () => {
           <View style={styles.searchBarContainer}>
             {showSearchBar && (
               <TextInput
+                onChangeText={handleTextDebounce}
                 placeholder="Search City"
                 placeholderTextColor={"gray"}
                 style={[
@@ -80,7 +118,7 @@ const HomeScreen = () => {
                     >
                       <FontAwesome5 name="map-pin" size={24} color="#A80000" />
                       <Text style={styles.locationText}>
-                        London, United Kingdom
+                        {location?.name}, {location?.country}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -91,9 +129,9 @@ const HomeScreen = () => {
           <View style={styles.forecastContainer}>
             <View style={styles.forecastTextContainer}>
               <Text style={styles.forecastTextHeadline}>
-                London,{" "}
+                {location?.name} {"   "}
                 <Text style={styles.forecastTextSubHeading}>
-                  United Kingdom
+                  {location?.country}
                 </Text>
               </Text>
             </View>
@@ -101,12 +139,14 @@ const HomeScreen = () => {
             <View style={styles.imageContainer}>
               <Image
                 style={styles.image}
-                source={require("../assets/images/partlycloudy.png")}
+                source={{ uri: `https:` + current?.condition?.icon }}
               />
             </View>
             <View style={styles.degreeContainer}>
-              <Text style={styles.degreeText}>23&#176;</Text>
-              <Text style={styles.degreeWheather}>Partly Cloudy</Text>
+              <Text style={styles.degreeText}>{current?.temp_c}&#176;</Text>
+              <Text style={styles.degreeWheather}>
+                {current?.condition?.text}
+              </Text>
             </View>
 
             <View style={styles.otherStatesContainer}>
@@ -115,14 +155,16 @@ const HomeScreen = () => {
                   style={styles.otherStatesIcon}
                   source={require("../assets/icons/wind.png")}
                 />
-                <Text style={styles.otherStatesText}>22km</Text>
+                <Text style={styles.otherStatesText}>
+                  {current?.wind_kph}km
+                </Text>
               </View>
               <View style={styles.otherStatesValues}>
                 <Image
                   style={styles.otherStatesIcon}
                   source={require("../assets/icons/drop.png")}
                 />
-                <Text style={styles.otherStatesText}>23%</Text>
+                <Text style={styles.otherStatesText}>{current?.humidity}%</Text>
               </View>
               <View style={styles.otherStatesValues}>
                 <Image
@@ -146,62 +188,26 @@ const HomeScreen = () => {
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
               >
-                <View style={styles.forecastForNextDaysContainer}>
-                  <Image
-                    style={styles.forecastForNextDaysImages}
-                    source={require("../assets/images/heavyrain.png")}
-                  />
-                  <Text style={styles.forecastDays}>Monday</Text>
-                  <Text style={styles.forecastForNextDaysDegree}>13&#176;</Text>
-                </View>
-                <View style={styles.forecastForNextDaysContainer}>
-                  <Image
-                    style={styles.forecastForNextDaysImages}
-                    source={require("../assets/images/heavyrain.png")}
-                  />
-                  <Text style={styles.forecastDays}>Monday</Text>
-                  <Text style={styles.forecastForNextDaysDegree}>13&#176;</Text>
-                </View>
-                <View style={styles.forecastForNextDaysContainer}>
-                  <Image
-                    style={styles.forecastForNextDaysImages}
-                    source={require("../assets/images/heavyrain.png")}
-                  />
-                  <Text style={styles.forecastDays}>Monday</Text>
-                  <Text style={styles.forecastForNextDaysDegree}>13&#176;</Text>
-                </View>
-                <View style={styles.forecastForNextDaysContainer}>
-                  <Image
-                    style={styles.forecastForNextDaysImages}
-                    source={require("../assets/images/heavyrain.png")}
-                  />
-                  <Text style={styles.forecastDays}>Monday</Text>
-                  <Text style={styles.forecastForNextDaysDegree}>13&#176;</Text>
-                </View>
-                <View style={styles.forecastForNextDaysContainer}>
-                  <Image
-                    style={styles.forecastForNextDaysImages}
-                    source={require("../assets/images/heavyrain.png")}
-                  />
-                  <Text style={styles.forecastDays}>Monday</Text>
-                  <Text style={styles.forecastForNextDaysDegree}>13&#176;</Text>
-                </View>
-                <View style={styles.forecastForNextDaysContainer}>
-                  <Image
-                    style={styles.forecastForNextDaysImages}
-                    source={require("../assets/images/heavyrain.png")}
-                  />
-                  <Text style={styles.forecastDays}>Monday</Text>
-                  <Text style={styles.forecastForNextDaysDegree}>13&#176;</Text>
-                </View>
-                <View style={styles.forecastForNextDaysContainer}>
-                  <Image
-                    style={styles.forecastForNextDaysImages}
-                    source={require("../assets/images/heavyrain.png")}
-                  />
-                  <Text style={styles.forecastDays}>Monday</Text>
-                  <Text style={styles.forecastForNextDaysDegree}>13&#176;</Text>
-                </View>
+                {weather?.forecast?.forecastday?.map((item, index) => {
+                  let date = new Date(item.date);
+                  let options = { weekday: "long" };
+                  let dayName = date.toLocaleDateString("en-US", options);
+                  return (
+                    <View
+                      key={index}
+                      style={styles.forecastForNextDaysContainer}
+                    >
+                      <Image
+                        style={styles.forecastForNextDaysImages}
+                        source={{ uri: `https:` + item?.day?.condition?.icon }}
+                      />
+                      <Text style={styles.forecastDays}>{dayName}</Text>
+                      <Text style={styles.forecastForNextDaysDegree}>
+                        {item?.day?.avgtemp_c}&#176;
+                      </Text>
+                    </View>
+                  );
+                })}
               </ScrollView>
             </View>
           </View>
